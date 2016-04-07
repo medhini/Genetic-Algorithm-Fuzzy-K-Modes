@@ -17,13 +17,19 @@ def compactness():
 def separation(centroids, membership_mat):
 	return
 
+"""Compactness or CostFunction"""
 def costFunction(membership_mat, n_clusters, n_points, alpha, centroids, X_Features):
 	
 	cost_function = 0.0
-
+	
 	for k in xrange(n_clusters):
+		temp = 0.0
+		denom = 0.0
 		for i in xrange(n_points):
-			cost_function += np.power(membership_mat[i][k], alpha)*dissimilarityMeasure(X_Features[i], centroids[k])
+			temp += np.power(membership_mat[i][k], alpha)*dissimilarityMeasure(X_Features[i], centroids[k])
+			denom += np.power(membership_mat[i][k], alpha)
+		temp = temp/denom
+		cost_function += temp
 
 	return cost_function
 
@@ -109,12 +115,12 @@ def Selection(chromosomes, n, k):
 	chromosomes = chromosomes[chromosomes[:,n*k].argsort()]
 	newChromosomes = np.zeros((n, n*k + 1))
 
-	alpha = 0.3
+	beta = 0.1
 	fitness = np.zeros(n)
 	cumProbability = np.zeros(n)
 
 	for i in xrange(n - 1, 0, -1):
-		fitness[i] = alpha*(pow((1 - alpha), i))
+		fitness[i] = beta*(pow((1 - beta), i))
 
 	"""Roulette Wheel Selection"""
 
@@ -141,20 +147,21 @@ def Selection(chromosomes, n, k):
 
 def CrossOver(chromosomes, n, k, X_Features, alpha):
 
-	newChromosomes = np.zeros((n, n*k))
+	newChromosomes = np.zeros((n, n * k + 1))
 	
 	for i in xrange(n):
 		membership_mat = np.reshape(chromosomes[i][0:n*k], (-1, k))
 		new_membership_met, cost_function = fuzzyKModes(membership_mat, X_Features, alpha, 1)    #Quick termination, 1 step fuzzy kmodes
-		newChromosomes[i] = new_membership_met.ravel()
-		
+		newChromosomes[i][0 : n * k] = new_membership_met.ravel()
+		newChromosomes[i][n * k] = cost_function
+
 	return newChromosomes
 
 def Mutation(chromosomes, n_points, n_clusters):
 
-	P = random.uniform(0,1)
+	P = 0.001
 	for i in xrange(n_points):
-		chromosome = chromosomes[i]
+		chromosome = chromosomes[i][0 : n * k]
 		chromosome = np.reshape(chromosome, (-1, n_clusters))
 
 		for j in xrange(n_points):
@@ -164,7 +171,8 @@ def Mutation(chromosomes, n_points, n_clusters):
 				gene = gene/sum(gene)
 				chromosome[j] = gene
 
-		chromosomes[i] = chromosome.ravel()
+		chromosomes[i][0 : n * k] = chromosome.ravel()
+
 	return chromosomes
 	
 if __name__ == "__main__":
@@ -179,12 +187,14 @@ if __name__ == "__main__":
 	k = 4
 	n = len(X_Features)
 	n_attributes = X_Features.shape[1]
-	alpha = 3
+	alpha = 1.2
 	max_epochs = 100
+	g_max = 15
 
 	populationSize = n
-	chromosomes = np.zeros((n, n*k + 1))
+	chromosomes = np.zeros((n, n * k + 1))
 
+	"""Initialize Population"""
 	for i in xrange(populationSize):
 		
 		membership_mat = np.random.rand(n, k)
@@ -192,19 +202,69 @@ if __name__ == "__main__":
 		for row in range(len(membership_mat)):
 			membership_mat[row] = membership_mat[row]/sum(membership_mat[row])
 
-		chromosomes[i][0:n*k] = membership_mat.ravel()
+		chromosomes[i][0 : n * k] = membership_mat.ravel()
+
 		centroids = calculateCentroids(membership_mat, X_Features, alpha)
-
 		chromosomes[i][n*k] = costFunction(membership_mat, k, n, alpha, centroids, X_Features)   #Last column represents the cost function of this chromosome
-
+			
 	"""Genetic Algorithm K Modes"""
-	population_after_selection = Selection(chromosomes, n, k)
-	population_after_crossover = CrossOver(population_after_selection, n, k, X_Features, alpha)
-	population_after_mutation = Mutation(population_after_crossover, n, k)
+	for x in xrange(g_max):
 
-	print population_after_crossover[0]
+		"""Best parent of this generation"""
+		min_value = 0
+		best_parent = chromosomes[0]
+		for i in xrange(populationSize):
+			if min_value == 0:
+				min_value = chromosomes[i][n*k]
 
-	"""Add Elitism"""
+			elif chromosomes[i][n*k] < min_value:
+				min_value = chromosomes[i][n*k]
+				best_parent = chromosomes[i]
+		
+		population_after_selection = Selection(chromosomes, n, k)
+		population_after_crossover = CrossOver(population_after_selection, n, k, X_Features, alpha)
+		chromosomes = Mutation(population_after_crossover, n, k)
+
+		"""Elitism at each generation"""
+
+		max_value = 0
+		worst_child_pos = 0
+		for i in xrange(populationSize):
+			membership_mat = np.reshape(chromosomes[i][0:n*k], (-1, k))
+			centroids = calculateCentroids(membership_mat, X_Features, alpha)
+			chromosomes[i][n*k] = costFunction(membership_mat, k, n, alpha, centroids, X_Features)   #Last column represents the cost function of this chromosome
+			if max_value == 0:
+				max_value = chromosomes[i][n*k]
+
+			elif chromosomes[i][n*k] > max_value:
+				max_value = chromosomes[i][n*k]
+				worst_child_pos = i
+
+		chromosomes[i] = best_parent
+
+	"""Best of the child chromosomes"""
+	min_value = 0
+	offspring = chromosomes[0]
+
+	for i in xrange(populationSize):
+		if min_value == 0:
+			min_value = chromosomes[i][n*k]
+
+		elif chromosomes[i][n*k] < min_value:
+			min_value = chromosomes[i][n*k]
+			offspring = chromosomes[i]
+
+	print "Final Surviving chromosomes : ", chromosomes
+	print "Final chosen chromosome : ", offspring
+	#Add all the min values here
+	print "Compactness : ", min_value
+
+	
+
+
+
+
+
 
 	 
 
