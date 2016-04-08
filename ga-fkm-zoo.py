@@ -7,31 +7,10 @@ from sklearn import preprocessing
 from collections import defaultdict
 from fractions import Fraction
 
-X_Features = []
 def dissimilarityMeasure(X, Y): 
 	""" Simple matching disimilarity measure """
 	return np.sum(X!=Y, axis = 0)
 	
-def calculateCentroids(membership_mat, X_Features, alpha):
-
-	n_points, n_attributes = X_Features.shape
-	n_clusters = membership_mat.shape[1]
-
-	WTemp = np.power(membership_mat, alpha)
-	centroids = np.zeros((n_clusters,n_attributes))
-
-	for z in xrange(n_clusters):
-		for x in xrange(n_attributes):
-			freq = defaultdict(int)
-			for y in xrange(n_points):
-				freq[X_Features[y][x]] += WTemp[y][z]
-
-			centroids[z][x] = max(freq, key = freq.get)
-	
-	centroids = centroids.astype(int)
-
-	return centroids
-
 def separation(centroids, membership_mat):
 
 	sep = 0.0
@@ -52,32 +31,10 @@ def costFunction(membership_mat, n_clusters, n_points, alpha, centroids, X_Featu
 		for i in xrange(n_points):
 			temp += np.power(membership_mat[i][k], alpha)*dissimilarityMeasure(X_Features[i], centroids[k])
 			denom += np.power(membership_mat[i][k], alpha)
-		
 		temp = temp/denom
 		cost_function += temp
 
 	return cost_function
-
-def comparatorCompactness(membership_mat_1, membership_mat_2):
-
-	alpha = 1.2
-	n_points = 47
-	n_clusters = 4
-
-	np.reshape(membership_mat_1, (-1, n_clusters))
-	np.reshape(membership_mat_2, (-1, n_clusters))
-	
-	centroids_1 = calculateCentroids(membership_mat_1, X_Features, alpha)
-	centroids_2 = calculateCentroids(membership_mat_2, X_Features, alpha)
-
-	compactness_1 = costFunction(membership_mat_1, n_clusters, n_points, alpha, centroids_1, X_Features)
-	compactness_2 = costFunction(membership_mat_2, n_clusters, n_points, alpha, centroids_2, X_Features)
-
-	return compactness_2 - compactness_1
-
-def comparatorSeparation():
-
-	return
 
 def updateMatrix(centroids, X_Features, n_points, n_clusters, n_attributes, alpha):
 
@@ -111,6 +68,27 @@ def updateMatrix(centroids, X_Features, n_points, n_clusters, n_attributes, alph
 
 	cost_function = costFunction(membership_mat, n_clusters, n_points, alpha, centroids, X_Features)
 	return membership_mat, cost_function
+
+
+def calculateCentroids(membership_mat, X_Features, alpha):
+
+	n_points, n_attributes = X_Features.shape
+	n_clusters = membership_mat.shape[1]
+
+	WTemp = np.power(membership_mat, alpha)
+	centroids = np.zeros((n_clusters,n_attributes))
+
+	for z in xrange(n_clusters):
+		for x in xrange(n_attributes):
+			freq = defaultdict(int)
+			for y in xrange(n_points):
+				freq[X_Features[y][x]] += WTemp[y][z]
+
+			centroids[z][x] = max(freq, key = freq.get)
+	
+	centroids = centroids.astype(int)
+
+	return centroids
 
 def fuzzyKModes(membership_mat, X_Features, alpha, max_epochs):
 	
@@ -199,35 +177,17 @@ def Mutation(chromosomes, n_points, n_clusters):
 		chromosomes[i][0 : n * k] = chromosome.ravel()
 
 	return chromosomes
-
-def crowdingDistanceAssignment(chromosomes, n_clusters, n_points):
-
-	distance = np.zeros(n_points)
-
-	sorted(chromosomes, cmp = comparatorCompactness)
-	distance[0] = distance[n_points-1] = 10000007
-
-	fMax = costFunction(np.reshape(chromosomes[0][0 : n_clusters * n_points] , (-1, n_clusters)))
-	fMin = costFunction(np.reshape(chromosomes[n_points - 1][0 : n_clusters * n_points], (-1, n_clusters)))
-
-	denom = fMax - fMin
-	for x in xrange(1,n_points - 1):
-		distance[x] += (costFunction(np.reshape(chromosomes[x + 1], (-1, n_clusters))) - np.reshape(chromosomes[x - 1], (-1, n_clusters)))/denom
 	
-	# sorted(chromosomes, cmp = comparatorCompactness(n_clusters, n_points, alpha, X_Features))
-	
-	return distance	
-
 if __name__ == "__main__":
-	dataset = 'soybean.csv'
+	dataset = 'zoo.csv'
 
 	# load the CSV file as a numpy matrix
 
 	soyData = np.genfromtxt(dataset, delimiter=',', dtype = 'str')
-	X_Features = soyData[:, 0:35].astype(int)
-	YLabels = preprocessing.LabelEncoder().fit_transform(soyData[:, 35])  #Convert label names to numbers
+	X_Features = soyData[:, 1:18].astype(int)
+	YLabels = preprocessing.LabelEncoder().fit_transform(soyData[:, 0])  #Convert label names to numbers
 
-	k = 4
+	k = 7
 	n = len(X_Features)
 	n_attributes = X_Features.shape[1]
 	alpha = 1.2
@@ -236,6 +196,9 @@ if __name__ == "__main__":
 
 	populationSize = n
 	chromosomes = np.zeros((n, n * k + 1))
+
+	print "GA-FKM start"
+	start_time = time.time()
 
 	"""Initialize Population"""
 	for i in xrange(populationSize):
@@ -253,20 +216,38 @@ if __name__ == "__main__":
 	"""Genetic Algorithm K Modes"""
 	for x in xrange(g_max):
 
+		"""Best parent of this generation"""
+		min_value = 0
+		best_parent = chromosomes[0]
+		for i in xrange(populationSize):
+			if min_value == 0:
+				min_value = chromosomes[i][n*k]
+
+			elif chromosomes[i][n*k] < min_value:
+				min_value = chromosomes[i][n*k]
+				best_parent = chromosomes[i]
+		
 		population_after_selection = Selection(chromosomes, n, k)
 		population_after_crossover = CrossOver(population_after_selection, n, k, X_Features, alpha)
 		chromosomes = Mutation(population_after_crossover, n, k)
 
+		"""Elitism at each generation"""
+
+		max_value = 0
+		worst_child_pos = 0
 		for i in xrange(populationSize):
 			membership_mat = np.reshape(chromosomes[i][0:n*k], (-1, k))
 			centroids = calculateCentroids(membership_mat, X_Features, alpha)
 			chromosomes[i][n*k] = costFunction(membership_mat, k, n, alpha, centroids, X_Features)   #Last column represents the cost function of this chromosome
-		#Elitism non dominated sorting
+			if max_value == 0:
+				max_value = chromosomes[i][n*k]
 
+			elif chromosomes[i][n*k] > max_value:
+				max_value = chromosomes[i][n*k]
+				worst_child_pos = i
 
-	distance = crowdingDistanceAssignment(chromosomes, k, n)
+		chromosomes[i] = best_parent
 
-	print distance
 	"""Best of the child chromosomes"""
 	min_value = 0
 	offspring = chromosomes[0]
@@ -283,8 +264,8 @@ if __name__ == "__main__":
 	print "Final chosen chromosome : ", offspring
 	print "Compactness : ", min_value
 
-	
-
+	print "GA-FKM complete"
+	print "\n \nTotal time :", time.time() - start_time
 
 
 

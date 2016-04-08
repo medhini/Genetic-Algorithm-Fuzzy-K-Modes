@@ -2,19 +2,23 @@ import numpy as np
 import urllib
 import math
 import random
+import time
 
 from sklearn import preprocessing
 from collections import defaultdict
-from fractions import Fraction
+from fractions import Fraction 
 
 def dissimilarityMeasure(X, Y): 
 	""" Simple matching disimilarity measure """
 	return np.sum(X!=Y, axis = 0)
-
-def compactness():
-	return
-
+	
 def separation(centroids, membership_mat):
+
+	sep = 0.0
+	k = len(centroids)
+	for x in xrange(k):
+		for y in xrange(x, k, 1):
+			sep += np.power(membership_mat[i][k], alpha)*dissimilarityMeasure(centroids[x], centroids[y])
 	return
 
 """Compactness or CostFunction"""
@@ -176,6 +180,7 @@ def Mutation(chromosomes, n_points, n_clusters):
 	return chromosomes
 	
 if __name__ == "__main__":
+
 	dataset = 'soybean.csv'
 
 	# load the CSV file as a numpy matrix
@@ -194,6 +199,9 @@ if __name__ == "__main__":
 	populationSize = n
 	chromosomes = np.zeros((n, n * k + 1))
 
+	print "GA-FKM start"
+	start_time = time.time()
+	
 	"""Initialize Population"""
 	for i in xrange(populationSize):
 		
@@ -256,10 +264,10 @@ if __name__ == "__main__":
 
 	print "Final Surviving chromosomes : ", chromosomes
 	print "Final chosen chromosome : ", offspring
-	#Add all the min values here
 	print "Compactness : ", min_value
 
-	
+	print "GA-FKM complete"
+	print "\n \nTotal time :", time.time() - start_time
 
 
 
