@@ -12,14 +12,32 @@ def dissimilarityMeasure(X, Y):
 	""" Simple matching disimilarity measure """
 	return np.sum(X!=Y, axis = 0)
 	
-def separation(centroids, membership_mat):
+def separation(centroids, membership_mat, no_clusters):
 
-	sep = 0.0
-	k = len(centroids)
-	for x in xrange(k):
-		for y in xrange(x, k, 1):
-			sep += np.power(membership_mat[i][k], alpha)*dissimilarityMeasure(centroids[x], centroids[y])
-	return
+	membership_clusters=numpy.tile(0.0, (no_clusters, no_clusters))
+
+	for i, centre in enumerate(individual):
+		for j, point in enumerate(individual):
+			su=0.0
+			k=0
+			if i!=j:
+				while k < no_clusters:
+					if j!=k:
+						su+=math.pow((((scipy.spatial.distance.hamming(individual[j],individual[i])))/((scipy.spatial.distance.hamming(data[j],centre[k])))),(2/(m-1)))
+					k+=1
+
+				if su!=0.0:
+					membership_clusters[i][j]=1/float(su)
+	
+	# Calculating sep
+	sep=0.0
+	for i, c1 in enumerate(individual):
+		sum2=0.0
+		for j, c2 in enumerate(individual):
+			if j!=i:
+				sum2+=(math.pow(membership_clusters[i][j],m)*scipy.spatial.distance.hamming(individual[i],individual[j]))
+		sep+=sum2
+
 
 """Compactness or CostFunction"""
 def costFunction(membership_mat, n_clusters, n_points, alpha, centroids, X_Features):
