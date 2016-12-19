@@ -13,9 +13,10 @@ Outline of the proposed algorithm:
 
 The method outperforms the state-of-the-art algorithms in terms of Arithment Rand Index, Inter-cluster separation, Intre-cluster distance and Computation Time. 
 
-**Datasets**
+**Requirments**
 
-Download the following datasets from the UCI Reposirtory:..
+* Python 2.7 or above
 
-1. [Soybean Dataset]()
-2. [Zoo Dataset]()
+**Instructions to run**
+
+
