@@ -19,4 +19,17 @@ The method outperforms the state-of-the-art algorithms in terms of Arithment Ran
 
 **Instructions to run**
 
+```
+python
+python ega-fmc.py
+```
+
+**Members**
+
+1. Medhini Narasimhan (medhini95@gmail.com)
+2. Suryansh Kumar
+3. Balaji Balasubramanian
+
+
+
 
