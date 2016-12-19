@@ -20,8 +20,8 @@ The method outperforms the state-of-the-art algorithms in terms of Arithment Ran
 **Instructions to run**
 
 ```
-python
 python ega-fmc.py
+python ega-fmc-zoo.py
 ```
 
 **Members**
